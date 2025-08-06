@@ -2,6 +2,9 @@
 requires = ["setuptools>=59.2.0", "numpy", "scipy"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+include = ["blockcg*"]
+
 [project]
 name = "blockcg"
 version = "0.0.1"
