@@ -33,8 +33,35 @@ def calc_conv_characteristic(A, X, Xtrue, norm="A"):
 
 
 def chan_rrqr(A, tau=1e-12, return_PiW=False):
-    """Implements Chan's RRQR. 
     """
+    Performs Chan's Rank-Revealing QR (RRQR) factorization on matrix A.
+    Parameters
+    ----------
+    A : array_like
+        Input matrix to factorize.
+    tau : float, optional
+        Threshold for determining numerical rank (default: 1e-12).
+    return_PiW : bool, optional
+        If True, returns the permutation-weighted matrix PiW.
+    Returns
+    -------
+    Q : ndarray
+        Orthogonal matrix from QR factorization.
+    R : ndarray
+        Upper triangular matrix from QR factorization.
+    perm : ndarray
+        Permutation array indicating column swaps.
+    rank : int
+        Estimated numerical rank of A.
+    W : ndarray
+        Weight matrix from RRQR process.
+    PiW : ndarray, optional
+        Permutation-weighted matrix (returned if return_PiW is True).
+    Notes
+    -----
+    Implements Chan's RRQR algorithm for rank-revealing QR decomposition.
+    """
+
     A = np.array(A, dtype=float)
     m, n = A.shape
     Q, R = qr(A, mode='economic')
@@ -80,22 +107,26 @@ def smallest_singular(M):
 
 def all_residuals_converged(R, B, tol=1e-5, B_norms=None):
     """
-    Check if all columns of residual R satisfy ||r_i|| < tol * ||b_i||.
-
+    Check if all columns of the residual matrix R have converged according to a relative or absolute tolerance.
     Parameters
     ----------
     R : ndarray, shape (n, m)
-        Residual matrix (columns are residuals for each right-hand side).
+        Residual matrix where each column corresponds to the residual for a right-hand side.
     B : ndarray, shape (n, m)
-        Right-hand side matrix (columns are b_i).
-    tol : float
-        Relative tolerance.
-
+        Right-hand side matrix where each column is a right-hand side vector.
+    tol : float, optional
+        Relative tolerance for convergence (default is 1e-5).
+    B_norms : ndarray, shape (m,), optional
+        Precomputed 2-norms of the columns of B. If not provided, norms are computed internally.
     Returns
     -------
     converged : bool
-        True if all columns satisfy the criterion, False otherwise.
+        True if all columns satisfy the convergence criterion:
+        - For columns with nonzero right-hand side: ||r_i|| < tol * ||b_i||
+        - For columns with zero right-hand side:    ||r_i|| < tol
+        False otherwise.
     """
+
     # Compute the 2-norm of each residual and rhs
     residual_norms = np.linalg.norm(R, axis=0)
     if B_norms is None:

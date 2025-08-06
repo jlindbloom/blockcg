@@ -7,13 +7,64 @@ from blockcg.util import *
 
 
 def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxiter=None, tau=1e-10, K=None):
-    """Implements the DP, BF, and HS variants of the block CG methods. The stopping criteria is the usual
-    relative residual criterion for CG applied to all columns.
-
-    variant: DP, BF, or  HS
-
     """
-
+    Implements block Conjugate Gradient (block CG) methods for solving systems of linear equations with multiple right-hand sides.
+    Supports the following block CG variants:
+        - DP: Block CG with QR-based orthogonalization (Default)
+        - BF: Block CG with Chan's RRQR-based orthogonalization
+        - HS: Block CG with block-Hestenes-Stiefel update
+    The method iteratively solves AX = B for X, where A is symmetric positive definite (SPD), and B may have multiple columns (right-hand sides).
+    The stopping criterion is based on the relative residual norm for each column.
+    Parameters
+    ----------
+    A : np.ndarray
+        Symmetric positive definite matrix of shape (n, n).
+    B_rhs : np.ndarray
+        Right-hand side matrix of shape (n, s), where s is the number of right-hand sides.
+    X0 : np.ndarray, optional
+        Initial guess for the solution, shape (n, s). If None, zeros are used.
+    tol : float, optional
+        Tolerance for the relative residual stopping criterion (default: 1e-5).
+    M : np.ndarray or callable, optional
+        Preconditioner matrix or function. If None, no preconditioning is applied.
+    Xtrue : np.ndarray, optional
+        True solution for error analysis (used for convergence metrics).
+    variant : str, optional
+        Block CG variant to use: "DP", "BF", or "HS" (default: "DP").
+    maxiter : int, optional
+        Maximum number of iterations (default: n).
+    tau : float, optional
+        Tolerance for RRQR in the "BF" variant (default: 1e-10).
+    K : np.ndarray, optional
+        Matrix whose columns span the kernel to be projected out (deflation).
+    Returns
+    -------
+    X : np.ndarray
+        Approximate solution matrix of shape (n, s).
+    info : dict
+        Dictionary containing convergence information and metrics:
+            - n_iters: Number of iterations performed
+            - residual_norms: Frobenius norms of residuals at each iteration
+            - converged: Boolean indicating convergence
+            - block_sizes: Block sizes at each iteration
+            - singular_breakdown: Boolean indicating if breakdown occurred
+            - elem_rel_residual_norms: Relative residual norms per column
+            - tot_time: Total runtime
+            - timing_A: Time spent in matrix-vector products with A
+            - timing_M: Time spent in preconditioning
+            - tot_matvec_A: Total number of A matvecs
+            - tot_matvec_M: Total number of M matvecs
+            - K_proj_norm: Norm of the projection onto the kernel (if K is provided)
+            - abs_conv_characteristics, rel_conv_characteristics: Convergence metrics (if Xtrue is provided)
+            - abs_two_conv_characteristics, rel_two_conv_characteristics: Additional convergence metrics (if Xtrue is provided)
+            - elem_A_errs, elem_two_errs: Elementwise error metrics (if Xtrue is provided)
+    Notes
+    -----
+    - The function assumes A is symmetric positive definite (SPD).
+    - Preconditioning is not supported for the "DR" variant.
+    - If the block size deflates to zero or a singular breakdown occurs, the iteration terminates early.
+    """
+    
     # Valid variants
     valid_variants = ["DP", "BF", "HS"]
     assert variant in valid_variants, f"Invalid variant, must be one of {valid_variants}"

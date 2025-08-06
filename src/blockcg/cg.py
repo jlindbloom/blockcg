@@ -4,7 +4,46 @@ import time
 
 
 def cg(A, b, x0=None, M=None, tol=1e-8, maxiter=None, xtrue=None, K=None):
-    """Standard conjugate gradient method.
+    """
+    Solve the linear system Ax = b using the Conjugate Gradient (CG) method.
+    Parameters
+    ----------
+    A : array_like or linear operator
+        Symmetric positive-definite matrix or linear operator representing the system.
+    b : array_like
+        Right-hand side vector.
+    x0 : array_like, optional
+        Initial guess for the solution. If None, zeros are used.
+    M : array_like or linear operator, optional
+        Preconditioner matrix or operator. If None, no preconditioning is applied.
+    tol : float, optional
+        Tolerance for convergence based on the relative residual norm. Default is 1e-8.
+    maxiter : int, optional
+        Maximum number of iterations. If None, defaults to the size of b.
+    xtrue : array_like, optional
+        True solution vector, used for error tracking. If provided, errors are computed at each iteration.
+    K : array_like, optional
+        Matrix whose columns span the kernel to be projected out at each iteration.
+    Returns
+    -------
+    x : ndarray
+        Approximate solution to Ax = b.
+    info : dict
+        Dictionary containing convergence information and statistics:
+            - 'residual_norms': array of residual norms at each iteration.
+            - 'rel_residual_norms': array of relative residual norms at each iteration.
+            - 'num_iters': number of iterations performed.
+            - 'converged': boolean indicating if convergence was achieved.
+            - 'tot_time': total elapsed time for the algorithm.
+            - 'tot_matvec_A': total number of matrix-vector products with A.
+            - 'tot_matvec_M': total number of matrix-vector products with M.
+            - 'K_proj_norm': norm of the projection onto the kernel (if K is provided).
+            - 'abs_A_errors', 'rel_A_errors': absolute and relative errors in A-norm (if xtrue is provided).
+            - 'abs_two_errors', 'rel_two_errors': absolute and relative errors in 2-norm (if xtrue is provided).
+    Notes
+    -----
+    This implementation supports optional preconditioning and kernel projection.
+    Error tracking is available if the true solution is provided.
     """
     b = np.asarray(b)
     n = b.shape[0]
@@ -13,7 +52,7 @@ def cg(A, b, x0=None, M=None, tol=1e-8, maxiter=None, xtrue=None, K=None):
     else:
         x = np.array(x0, copy=True)
         if K is not None: x -= K @ (K.T @ x) # remove part from the kernel
-
+    
     if maxiter is None:
         maxiter = n
 
@@ -146,7 +185,44 @@ def cg(A, b, x0=None, M=None, tol=1e-8, maxiter=None, xtrue=None, K=None):
 
 
 def parallelcg(A, B_rhs, X0=None, tol=1e-3, M=None, Xtrue=None, maxiter=None, K=None):
-    """Solves A X = B by running cg in parallel for each column.
+    """
+    Solves multiple symmetric positive definite (SPD) linear systems in parallel using the Conjugate Gradient (CG) method.
+    Each column of B_rhs is treated as a separate right-hand side, and the corresponding solution is computed in parallel.
+    Optionally, preconditioning and true solutions for error analysis can be provided.
+    Parameters
+    ----------
+    A : np.ndarray
+        SPD matrix of shape (n, n).
+    B_rhs : np.ndarray
+        Right-hand side matrix of shape (n, s), where each column is a separate system.
+    X0 : np.ndarray, optional
+        Initial guess for the solution, shape (n, s). If None, zeros are used.
+    tol : float, optional
+        Tolerance for convergence. Default is 1e-3.
+    M : np.ndarray or callable, optional
+        Preconditioner for A. Default is None.
+    Xtrue : np.ndarray, optional
+        True solution matrix for error analysis, shape (n, s). Default is None.
+    maxiter : int, optional
+        Maximum number of iterations for CG. Default is n.
+    K : any, optional
+        Optional projection or additional parameter for CG. Default is None.
+    Returns
+    -------
+    X : np.ndarray
+        Solution matrix of shape (n, s), where each column is the solution to A x = b.
+    info : dict
+        Dictionary containing convergence information and statistics:
+            - n_iters: List of iteration counts for each system.
+            - converged: List of booleans indicating convergence for each system.
+            - K_proj_norm: Sum of projection norms (if applicable).
+            - tot_time: Total computation time.
+            - tot_matvec_A: Total number of matrix-vector products with A.
+            - tot_matvec_M: Total number of matrix-vector products with M.
+            - all_converged: Boolean indicating if all systems converged.
+            - elem_rel_residual_norms: Array of relative residual norms for each system.
+            - elem_A_errs: Array of absolute A-norm errors (if Xtrue is provided).
+            - elem_two_errs: Array of absolute 2-norm errors (if Xtrue is provided).
     """
 
     # Copy B
@@ -169,6 +245,7 @@ def parallelcg(A, B_rhs, X0=None, tol=1e-3, M=None, Xtrue=None, maxiter=None, K=
         pass
 
     tot_start_time = time.perf_counter()
+    
 
     if Xtrue is not None:
         
@@ -212,6 +289,7 @@ def parallelcg(A, B_rhs, X0=None, tol=1e-3, M=None, Xtrue=None, maxiter=None, K=
         "all_converged": True,
         "elem_rel_residual_norms": [],
     }
+
 
     largest_len = 0
     for j in range(B.shape[1]):
@@ -261,7 +339,7 @@ def parallelcg(A, B_rhs, X0=None, tol=1e-3, M=None, Xtrue=None, maxiter=None, K=
             elem_A_errs.append(sub_info["abs_A_errors"])
             elem_two_errs.append(sub_info["abs_two_errors"])
 
-        
+
     #info["elem_rel_residual_norms"] = np.hstack( elem_rel_residual_norms )
     info["elem_rel_residual_norms"] = np.vstack( elem_rel_residual_norms )
 
