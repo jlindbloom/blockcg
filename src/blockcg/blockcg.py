@@ -42,6 +42,10 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
     timing_A = 0
     timing_M = 0
 
+    # Matvec counting
+    tot_matvec_A = 0
+    tot_matvec_M = 0
+
     # Initial residual
     if X0 is None:
         Rcurr = B
@@ -50,6 +54,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
         start_time = time.perf_counter()
         AX0 = A @ X0
         timing_A += time.perf_counter() - start_time
+        tot_matvec_A += X0.shape[1]
         Rcurr = B - AX0
         X = X0
     
@@ -86,7 +91,15 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
             "residual_norms": np.asarray(residual_norms),
             "converged": converged,
             "block_sizes": np.asarray(block_sizes),
+            "singular_breakdown": singular_breakdown,
+            "elem_rel_residual_norms": elem_rel_residual_norms,
+            "tot_time": tot_time,
+            "timing_A": timing_A,
+            "timing_M": timing_M,
+            "tot_matvec_A": tot_matvec_A,
+            "tot_matvec_M": tot_matvec_M,
         }
+        
 
         if Xtrue is not None:
             info["abs_conv_characteristics"] = np.asarray(abs_conv_characteristics)
@@ -100,6 +113,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
         start_time = time.perf_counter()
         Zcurr = M @ Rcurr
         timing_M = time.perf_counter() - start_time
+        tot_matvec_M += Rcurr.shape[1]
     else:
         Zcurr = Rcurr
     
@@ -124,6 +138,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
             start_time = time.perf_counter()
             Q = A @ P
             timing_A += time.perf_counter() - start_time
+            tot_matvec_A += P.shape[1]
             PtQ = P.T @ Q
             ZcurrtRcurr = Zcurr.T @ Rcurr
 
@@ -149,6 +164,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
             start_time = time.perf_counter()
             Q = A @ P
             timing_A += time.perf_counter() - start_time
+            tot_matvec_A += P.shape[1]
             PtQ = P.T @ Q
             Gamma = np.linalg.solve(PtQ, P.T @ Rcurr)
             X += P @ Gamma
@@ -186,6 +202,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
                 start_time = time.perf_counter()
                 Znext = M @ Rnext
                 timing_M = time.perf_counter() - start_time
+                tot_matvec_M += Rnext.shape[1]
             else:
                 Znext = Rnext
 
@@ -206,6 +223,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
                 start_time = time.perf_counter()
                 Zcurr = M @ Rcurr
                 timing_M = time.perf_counter() - start_time
+                tot_matvec_M += Rcurr.shape[1]
             else:
                 Zcurr = Rcurr
         
@@ -226,7 +244,7 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
             break
         
     tot_end_time = time.perf_counter()
-    tot_time = tot_end_time - start_time
+    tot_time = tot_end_time - tot_start_time
 
     info = {
         "n_iters": n_iters,
@@ -238,6 +256,8 @@ def blockcg(A, B_rhs, X0=None, tol=1e-5, M=None, Xtrue=None, variant="DP", maxit
         "tot_time": tot_time,
         "timing_A": timing_A,
         "timing_M": timing_M,
+        "tot_matvec_A": tot_matvec_A,
+        "tot_matvec_M": tot_matvec_M,
     }
 
     if K is None:

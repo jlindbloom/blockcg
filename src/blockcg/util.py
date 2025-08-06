@@ -201,28 +201,3 @@ def laplacian2D_dirichlet(grid_shape):
 
     return A, K
 
-
-
-
-
-
-def random_spd_with_p_eigenvalues(N, p, eig_min=1.0, eig_max=10.0, rseed=None):
-    """
-    """
-    rng = np.random.default_rng(rseed)
-
-    # 1. Choose p distinct positive eigenvalues
-    eigvals_distinct = np.linspace(eig_min, eig_max, p)
-
-    # 2. Repeat each as needed to make N entries (with possible repeats)
-    eigvals = np.tile(eigvals_distinct, N // p + 1)[:N]
-    rng.shuffle(eigvals)  # Randomize their order
-    
-    # 3. Generate a random orthogonal matrix Q
-    Q, _ = np.linalg.qr(rng.standard_normal((N, N)))
-    
-    # 4. Construct SPD matrix
-    A = Q @ np.diag(eigvals) @ Q.T
-    # Ensure symmetry (numerical)
-    A = (A + A.T) / 2
-    return A, eigvals
