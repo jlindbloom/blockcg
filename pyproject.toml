@@ -1,9 +1,9 @@
-[build-system]
-requires = ["setuptools>=59.2.0", "numpy", "scipy"]
-build-backend = "setuptools.build_meta"
+[tool.hatch.build.targets.wheel]
+packages = ["blockcg"]
 
-[tool.setuptools.packages.find]
-include = ["blockcg*"]
+[build-system]
+requires = ["hatchling", "numpy", "scipy"]
+build-backend = "hatchling.build"
 
 [project]
 name = "blockcg"
